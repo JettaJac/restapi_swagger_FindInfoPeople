@@ -1,4 +1,4 @@
-module main
+module github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api
 
 go 1.21.1
 
