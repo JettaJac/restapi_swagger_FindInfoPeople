@@ -21,9 +21,9 @@ import (
 	"net/http"
 	"os"
 
+	swapi "github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/generated"
+	"github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/internal/api"
 	middleware "github.com/oapi-codegen/nethttp-middleware"
-	swapi "main/generated"
-	"main/internal/api"
 )
 
 func main() {

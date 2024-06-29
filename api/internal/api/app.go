@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	// "fmt"
-	swapi "main/generate"
+	swapi "github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/generate"
 	"net/http"
 	"sync"
 )
