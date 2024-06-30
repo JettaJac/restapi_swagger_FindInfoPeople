@@ -1,0 +1,6 @@
+go 1.21.1
+
+use (
+    github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/generate
+    github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api
+)

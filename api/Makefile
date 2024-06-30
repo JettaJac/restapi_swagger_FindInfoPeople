@@ -41,7 +41,7 @@ tidy-ci:
 
 swagger: 
 	oapi-codegen --config config/cfgswagger.yaml ../swagger/swagger.yaml
-
+	oapi-codegen --config config/cfgswaggerclient.yaml ../swagger/swagger.yaml
 
 
 run: 

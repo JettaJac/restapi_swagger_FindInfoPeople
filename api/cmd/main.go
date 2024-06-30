@@ -15,15 +15,19 @@ import (
 	// _ "github.com/oapi-codegen/oapi-codegen"
 	// _ "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen"
 	// _ "github.com/oapi-codegen/oapi-codegen/v2"
-	"flag"
-	"log"
+
+	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"log/slog"
+
+	swapi "main/generated"
+	"main/internal/app"
+	"main/internal/config"
+	"main/internal/lib/logger"
 	"net"
 	"net/http"
 	"os"
-
-	swapi "github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/generated"
-	"github.com/JettaJac/restapi_swagger_FindInfoPeople/tree/main/api/internal/api"
-	middleware "github.com/oapi-codegen/nethttp-middleware"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
@@ -44,21 +48,48 @@ func main() {
 	// // And we serve HTTP until the world ends.
 	// log.Fatal(s.ListenAndServe())
 
-	port := flag.String("port", "8080", "Port for test HTTP server")
-	flag.Parse()
+	// ------------------------------------------------------------------
+	// !!!
 
-	swagger, err := swapi.GetSwagger()
+	// Генериция конфига
+	cfg := config.NewConfig()
+	// Логгер
+	log := sl.SetupLogger(cfg.Env)
+	log.Info("starting application", slog.String("env", cfg.Env))
+	log.Debug("debug messages are enabled")
+	// База данных
+
+	// инициализация приложения
+	application, err := app.NewApp(cfg, log)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading swagger spec\n: %s", err)
-		os.Exit(1)
+		log.Error("The application is not initialized: ", sl.Err(err))
+		return
 	}
 
-	// Clear out the servers array in the swagger spec, that skips validating
-	// that server names match. We don't know how this thing will be run.
-	swagger.Servers = nil
+	// запуск самого сервера
+	go application.Run()
+
+	// остановка сервера по сигналам
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	sign := <-stop
+	log.Info("stopping signal", slog.String("signal", sign.String()))
+	application.GRPCSrv.Stop()
+	log.Info("application stopped")
+
+	// ------------------------------------------------------------------
+
+	// port := flag.String("port", "8080", "Port for test HTTP server")
+	// flag.Parse()
+
+	// // Clear out the servers array in the swagger spec, that skips validating
+	// // that server names match. We don't know how this thing will be run.
+	// swagger.Servers = nil
 
 	// Create an instance of our handler which satisfies the generated interface
-	petStore := api.NewPetStore()
+	petStore, _ := api.NewPetStore()
+	Storage, _ := api.New("fgchdj")
+	_ = Storage
 
 	r := http.NewServeMux()
 
