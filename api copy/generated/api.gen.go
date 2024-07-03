@@ -1,4 +1,4 @@
-//go:build go1.22
+//go:build go1.21
 
 // Package api provides primitives to interact with the openapi HTTP API.
 //

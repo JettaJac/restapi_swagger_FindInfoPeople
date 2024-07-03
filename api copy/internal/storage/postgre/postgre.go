@@ -33,9 +33,9 @@ func New(storagePath string /*p Postgres*/) (*Storage, error) {
 		return nil, fmt.Errorf("%s: %s", op, err)
 	}
 
-	// if err := db.Ping(); err != nil {
-	// 	return nil, fmt.Errorf("%s.Ping: %w", op, err)
-	// }
+	if err := db.Ping(); err != nil {
+		return nil, fmt.Errorf("%s.Ping: %w", op, err)
+	}
 
 	// возможно здесь запустить миграции как в п.посгре
 
@@ -48,6 +48,7 @@ func (storage *Storage) CloseDB() { //!!!может и не надо
 }
 
 // !!! сделать запросы горутиной, возмжно, как у Кати
+// GetInfo(w http.ResponseWriter, r *http.Request, params GetInfoParams)
 func (s *Storage) GetInfo(ctx context.Context, passportSerie int64, passportNumber int64) (models.User, error) {
 	const op = "storage.posgre.User"
 	var user models.User

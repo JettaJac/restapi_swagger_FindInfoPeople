@@ -10,102 +10,46 @@ package main
 // oapi-codegen generate server,types --output-dir apigenerate --output-file api.gen.go ../swagger/swagger.yaml
 // oapi-codegen --config config/cfgswagger.yaml ../swagger/swagger.yaml  - done
 
+// curl http://localhost:8080/info\?passportSerie=1234\&passportNumber=4663423
+
 import (
+	// middleware "github.com/oapi-codegen/nethttp-middleware"
+
+	"context"
 	"fmt"
-	// _ "github.com/oapi-codegen/oapi-codegen"
-	// _ "github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen"
-	// _ "github.com/oapi-codegen/oapi-codegen/v2"
-
-	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"log/slog"
-
-	swapi "main/generated"
 	"main/internal/app"
 	"main/internal/config"
-	"main/internal/lib/logger"
-	"net"
-	"net/http"
+	"main/pkg/lib/logger"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	// fmt.Println("Start")
-	// // create a type that satisfies the `api.ServerInterface`, which contains an implementation of every operation from the generated code
-	// server := api.NewServer()
+	fmt.Println("Start") //!!! Delete
 
-	// r := http.NewServeMux()
-
-	// // get an `http.Handler` that we can use
-	// h := api.HandlerFromMux(server, r)
-
-	// s := &http.Server{
-	// 	Handler: h,
-	// 	Addr:    "0.0.0.0:8080",
-	// }
-
-	// // And we serve HTTP until the world ends.
-	// log.Fatal(s.ListenAndServe())
-
-	// ------------------------------------------------------------------
-	// !!!
-
-	// Генериция конфига
+	// initializing the configuration
 	cfg := config.NewConfig()
-	// Логгер
+
+	// logger initialization
 	log := sl.SetupLogger(cfg.Env)
 	log.Info("starting application", slog.String("env", cfg.Env))
 	log.Debug("debug messages are enabled")
-	// База данных
 
-	// инициализация приложения
-	application, err := app.NewApp(cfg, log)
+	// run application
+	app, err := app.NewApp(cfg, log)
 	if err != nil {
-		log.Error("The application is not initialized: ", sl.Err(err))
-		return
+		log.Error("cannot create server", sl.Err(err))
 	}
+	// run server
+	go app.ApiSrv.MustRun()
 
-	// запуск самого сервера
-	go application.Run()
-
-	// остановка сервера по сигналам
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	sign := <-stop
 	log.Info("stopping signal", slog.String("signal", sign.String()))
-	application.GRPCSrv.Stop()
+	app.ApiSrv.Stop(context.Background())
 	log.Info("application stopped")
-
-	// ------------------------------------------------------------------
-
-	// port := flag.String("port", "8080", "Port for test HTTP server")
-	// flag.Parse()
-
-	// // Clear out the servers array in the swagger spec, that skips validating
-	// // that server names match. We don't know how this thing will be run.
-	// swagger.Servers = nil
-
-	// Create an instance of our handler which satisfies the generated interface
-	petStore, _ := api.NewPetStore()
-	Storage, _ := api.New("fgchdj")
-	_ = Storage
-
-	r := http.NewServeMux()
-
-	// We now register our petStore above as the handler for the interface
-	swapi.HandlerFromMux(petStore, r)
-
-	// Use our validation middleware to check all requests against the
-	// OpenAPI schema.
-	h := middleware.OapiRequestValidator(swagger)(r)
-
-	s := &http.Server{
-		Handler: h,
-		Addr:    net.JoinHostPort("0.0.0.0", *port),
-	}
-
-	// And we serve HTTP until the world ends.
-	log.Fatal(s.ListenAndServe())
 
 }

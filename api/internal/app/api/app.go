@@ -1,45 +1,36 @@
 package apiapp
 
 import (
-	// "database/sql"
-	// "encoding/json"
 	"fmt"
-	"github.com/go-openapi/spec"
+	// middleware "github.com/oapi-codegen/nethttp-middleware"
+	"context"
 	"log/slog"
-	swapi "main/generate"
+	swapi "main/generated"
 	"main/internal/config"
 	"main/internal/server"
-	"main/internal/service/sso"
-	// "net/http"
-	"os"
+	"net/http"
 )
 
 type App struct {
-	config  *config.Config // !!! А нужен ли здесь конфиг
-	log     *slog.Logger
-	server  *server.Server
-	swagger *spec.Swagger
+	config *config.Config // !!! А нужен ли здесь конфиг
+	log    *slog.Logger
+	server *server.Server
 }
 
-func New(log *slog.Logger, config *config.Config, ssoService sso.SSO) *App {
-	swagger, err := swapi.GetSwagger()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading swagger spec\n: %s", err)
-		os.Exit(1)
-	}
-	// Clear out the servers array in the swagger spec, that skips validating
-	// that server names match. We don't know how this thing will be run.
-	swagger.Servers = nil
+// type People interface {
+// 	GetInfo(http.ResponseWriter, *http.Request, swapi.GetInfoParams)
+// }
 
-	server := server.NewServer(config, swagger)
+func New(log *slog.Logger, config *config.Config /*, PeopleProvider people.People*/) *App {
+	fmt.Println("ttt")
+	apiServer := server.NewServer(config /*, swagger*/)
+
 	log.Info("Starting server", slog.String("address", config.Address))
-	//  Для регистрации обработчиков API-маршрутов.
-	swapi.HandlerFromMux(ssoService, server.Router) //!!! Возможно не здесь надо а в сервере
+
 	return &App{
-		config:  config,
-		log:     log,
-		server:  server,
-		swagger: swagger,
+		config: config,
+		log:    log,
+		server: apiServer,
 	}
 
 }
@@ -51,14 +42,49 @@ func (a *App) MustRun() {
 }
 
 func (a *App) Run() error {
-	const op = "apiapp.Run"
-	log := a.log.With(
-		slog.String("op", op),
-		// slog.Int("grpcPort", a.config.Address),подумать в конфигах какой формат инт или стринг
-	)
-	_ = log //!!!
-	return nil
+	// !!!Логгер уже инициализирован ранее
+
+	// Загрузка спецификации Swagger
+	swagger, err := swapi.GetSwagger()
+	if err != nil {
+		a.log.Error("Error loading swagger spec" /*, slog.Error(err)*/)
+		return err
+	}
+	swagger.Servers = nil // Удаление серверов из спецификации, если они там есть
+
+	// Создание маршрутизатора
+	router := http.NewServeMux()
+	// Регистрация тестового
+	// router.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	// 	a.server.HandleHome()
+	// }))
+
+	// Регистрация пользовательского обработчика GetInfo //!!! Вынест в отдельную функцию
+	router.Handle("/info", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Создание и заполнение структуры параметров
+		params := swapi.GetInfoParams{
+			// Заполните структуру соответствующими значениями
+		}
+		a.server.GetInfo(w, r, params)
+	}))
+
+	// Регистрация обработчиков Swagger
+	swapi.HandlerFromMux(a.server, router)
+
+	// Применение валидатора запросов
+	// h := middleware.OapiRequestValidator(swagger)(router)
+
+	// Запуск сервера
+	a.log.Info("Server is starting", slog.String("address", a.config.Address))
+	return http.ListenAndServe(":8080", router)
 }
-func (a *App) Stop() {
-	// !!!
+
+// Stop stops the gRPC server.
+func (a *App) Stop(ctx context.Context) {
+	const op = "apiapp.Stop"
+	log := a.log.With(slog.String("op", op))
+	log.Info("stopping API server", slog.String("API address", a.server.Server.Addr))
+
+	a.server.Server.Shutdown(ctx)
 }
