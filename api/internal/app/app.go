@@ -19,7 +19,7 @@ func NewApp(config *config.Config, log *slog.Logger) (*App, error) {
 
 	const op = "internal/app.New"
 
-	storage, err := postgre.New(config.NameDataBase /*config.Postgres*/)
+	storage, err := postgre.New(config.Postgres /*config.Postgres*/)
 	if err != nil {
 		log.Error("app.NewApp: Failed to init storage", op, sl.Err(err))
 		return nil, fmt.Errorf("%s: %w", op, err)

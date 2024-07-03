@@ -41,6 +41,10 @@ tidy-ci:
 
 swagger: 
 	oapi-codegen --config configs/cfgswagger.yaml ../swagger/swagger.yaml
+# генерирует другую реализацию сваггера на echo
+#	oapi-codegen --generate types,server --config configs/cfgswagger.yaml  --package swapi ../swagger/swagger.yaml 
+
+
 
 
 
