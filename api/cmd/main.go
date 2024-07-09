@@ -11,6 +11,10 @@ package main
 // oapi-codegen --config config/cfgswagger.yaml ../swagger/swagger.yaml  - done
 
 // curl http://localhost:8080/info\?passportSerie=1234\&passportNumber=4663423
+// curl -i -X GET -H "Content-Type: application/json" -d '{"":""}' "http://localhost:8080/http://localhost:8080/info?passportSerie=1234&passportNumber=4663423"
+
+//  curl -i -X GET -H "Content-Type: application/json" -d '{"":""}' "http://localhost:8080/swagger"
+// !!! Обработать слуяай http://localhost:8080/info
 
 import (
 	// middleware "github.com/oapi-codegen/nethttp-middleware"
@@ -42,6 +46,7 @@ func main() {
 	if err != nil {
 		log.Error("cannot create server", sl.Err(err))
 	}
+
 	// run server
 	go app.ApiSrv.MustRun()
 
@@ -50,6 +55,6 @@ func main() {
 	sign := <-stop
 	log.Info("stopping signal", slog.String("signal", sign.String()))
 	app.ApiSrv.Stop(context.Background())
+	/// !!!надо закрыть базу данных
 	log.Info("application stopped")
-
 }

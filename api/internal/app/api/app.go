@@ -1,36 +1,33 @@
 package apiapp
 
 import (
-	"fmt"
-	// middleware "github.com/oapi-codegen/nethttp-middleware"
 	"context"
+	"fmt"
+	middleware "github.com/oapi-codegen/nethttp-middleware"
 	"log/slog"
 	swapi "main/generated"
 	"main/internal/config"
 	"main/internal/server"
+	"main/internal/service/people"
 	"net/http"
 )
 
 type App struct {
-	// config *config.Config // !!! А нужен ли здесь конфиг
 	log    *slog.Logger
 	server *server.Server
+	info   people.Info
 }
 
-// type People interface {
-// 	GetInfo(http.ResponseWriter, *http.Request, swapi.GetInfoParams)
-// }
-
-func New(log *slog.Logger, config *config.Config /*, PeopleProvider people.People*/) *App {
+func New(log *slog.Logger, config *config.Config, PeopleProvider people.Info) *App {
 	fmt.Println("ttt")
-	apiServer := server.NewServer(config, log /*, swagger*/)
+	apiServer := server.NewServer(config, log, PeopleProvider)
 
 	log.Info("Starting server", slog.String("address", config.HTTPServer.Address))
 
 	return &App{
-		// config: config,
 		log:    log,
 		server: apiServer,
+		info:   PeopleProvider,
 	}
 
 }
@@ -55,34 +52,50 @@ func (a *App) Run() error {
 	// Создание маршрутизатора
 	router := http.NewServeMux()
 
-	// Регистрация пользовательского обработчика GetInfo //!!! Вынест в отдельную функцию
-	// router.Handle("/info", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	// Создание и заполнение структуры параметров
-	// 	params := swapi.GetInfoParams{
-	// 		PassportSerie:  7777777,
-	// 		PassportNumber: 3333333,
-	// 	}
-	// 	a.server.GetInfo(w, r, params)
+	// a.server.ConfigureRouter(router)
+
+	// Регистрация обработчиков Swagger
+	z := swapi.HandlerFromMux(a.server, router)
+	_ = z
+
+	// Применение валидатора запросов
+	h := middleware.OapiRequestValidator(swagger)(router)
+	_ = h
+	a.server.Server.Handler = z
+
+	// router.Handle("/swagger", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	m := []byte("swagger.MarshalJSON()")
+	// 	w.Write(m)
 	// }))
+
+	// s := &http.Server{
+	// 	Handler: z,
+	// 	Addr:    "0.0.0.0:8080",
+	// }
 
 	a.server.ConfigureRouter(router)
 
-	// Регистрация обработчиков Swagger
-	swapi.HandlerFromMux(a.server, router)
-
-	// Применение валидатора запросов
-	// h := middleware.OapiRequestValidator(swagger)(router)
-
-	// Запуск сервера
-	a.log.Info("Server is starting", slog.String("address", "a.config.HTTPServer.Address) --- подумать надо ли"))
-	return http.ListenAndServe(":8080", router) // !!! изменить на корректный адрес
+	// _ = s
+	// Запуск сервера|
+	// !!! Проверить через какой роутер запускаеться
+	a.log.Info("Server is starting++++", slog.String("address", "a.config.HTTPServer.Address) --- подумать надо ли"))
+	// return http.ListenAndServe(":8080", router) // !!! изменить на корректный адрес
+	// return http.ListenAndServe(":8080", a.server) // !!! изменить на корректный адрес
+	// return a.server.Server.ListenAndServe()
+	// return s.ListenAndServe()
+	return http.ListenAndServe(":8080", h)
+	// return http.ListenAndServe(":8080", a.server.Router)
+	// return http.ListenAndServe(":8080", a.server.Server.Handler)
+	// return nil
 }
 
 // Stop stops the gRPC server.
 func (a *App) Stop(ctx context.Context) {
 	const op = "apiapp.Stop"
 	log := a.log.With(slog.String("op", op))
-	log.Info("stopping API server", slog.String("API address", a.server.Server.Addr))
 
+	log.Info("stopping API server", slog.String("API address", a.server.Server.Addr))
+	// a.info.
 	a.server.Server.Shutdown(ctx)
 }

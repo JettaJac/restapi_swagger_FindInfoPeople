@@ -27,6 +27,32 @@ paths:
           description: Bad request
         '500':
           description: Internal server error
+  /people:
+    get:
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PeopleList'
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
 components:
   schemas:
     People:
@@ -48,3 +74,16 @@ components:
         address:
           type: string
           example: г. Москва, ул. Ленина, д. 5, кв. 1
+    PeopleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/People'
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer

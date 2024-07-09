@@ -1,11 +1,12 @@
 package postgre
 
 import (
-	"context"
+	// "context"
 	"database/sql"
 	"errors"
 	"fmt"
 	_ "github.com/lib/pq"
+	swapi "main/generated"
 	"main/internal/domain/models"
 	"main/internal/storage"
 )
@@ -44,23 +45,24 @@ func New(p Postgres) (*Storage, error) {
 }
 
 // CloseDB close database
-func (storage *Storage) CloseDB() { //!!!может и не надо
-	storage.db.Close()
-}
+// func (storage *Storage) CloseDB() { //!!!может и не надо
+// 	storage.db.Close()
+// }
 
 // !!! сделать запросы горутиной, возмжно, как у Кати
-func (s *Storage) GetInfo(ctx context.Context, passportSerie int64, passportNumber int64) (models.User, error) {
+func (s *Storage) GetInfo( /*ctx context.Context, */ p swapi.GetInfoParams) (*models.User, error) {
 	const op = "storage.posgre.User"
-	var user models.User
 
-	query := fmt.Sprintf("SELECT * FROM users WHERE passportSerie = $1")
-	err := s.db.QueryRow(query, passportSerie).Scan(&user)
+	var user = &models.User{}
 
+	query := fmt.Sprintf("SELECT id, surname, name, patronymic, address FROM users WHERE passportSerie = $1 AND passportNumber = $2")
+	err := s.db.QueryRow(query, p.PassportSerie, p.PassportNumber).Scan(&user.ID, &user.Surname, &user.Name, &user.Patronymic, &user.Address)
+	fmt.Println(user, err)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return models.User{}, fmt.Errorf("N:%s: %w", op, storage.ErrUserNotFound)
+			return nil, fmt.Errorf("N:%s: %w", op, storage.ErrUserNotFound)
 		}
-		return models.User{}, fmt.Errorf("O:%s:  %w", op, err)
+		return nil, fmt.Errorf("O:%s:  %w", op, err)
 	}
 
 	return user, nil
