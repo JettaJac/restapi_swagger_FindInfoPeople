@@ -12,6 +12,7 @@ import (
 	"net/http"
 )
 
+// Проверить входные данные на количество символов , в имени отсутствия цифр
 type App struct {
 	log    *slog.Logger
 	server *server.Server
@@ -29,7 +30,6 @@ func New(log *slog.Logger, config *config.Config, PeopleProvider people.Info) *A
 		server: apiServer,
 		info:   PeopleProvider,
 	}
-
 }
 
 func (a *App) MustRun() {

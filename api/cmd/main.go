@@ -16,6 +16,9 @@ package main
 //  curl -i -X GET -H "Content-Type: application/json" -d '{"":""}' "http://localhost:8080/swagger"
 // !!! Обработать слуяай http://localhost:8080/info
 
+// curl -i -X GET -H "Content-Type: application/json" -d '{"":""}' "http://localhost:8080/list?name=Иван&limit=2&page=2"
+//  curl -i -X GET -H "Content-Type: application/json" -d '{"":""}' "http://localhost:8080/list?name=Иван&passportSerie=1234"
+
 import (
 	// middleware "github.com/oapi-codegen/nethttp-middleware"
 

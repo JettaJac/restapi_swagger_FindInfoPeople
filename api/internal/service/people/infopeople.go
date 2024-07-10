@@ -1,5 +1,7 @@
 package people
 
+//переименовать возможно с добавлением сервис
+
 // !!!
 
 import (
@@ -32,6 +34,7 @@ type Info struct {
 type PeopleProvider interface {
 	GetInfo( /*ctx context.Context,*/ p swapi.GetInfoParams /* PassportSerie, PassportNumber int64*/) (*models.User, error)
 	// ProvideAllPosts(ctx context.Context, page int64) ([]models.Post, error)
+	GetList( /*ctx context.Context, */ p swapi.GetListParams) ([]models.User, error)
 }
 
 var ( //Откорректировать
@@ -55,7 +58,7 @@ func (i *Info) GetInfo( /*ctx context.Context, */ p swapi.GetInfoParams) (*model
 	var user *models.User
 
 	const op = "info.GetInfo"
-
+	fmt.Println(p.PassportSerie, "IIIIIIIIIIIII", p.PassportNumber)
 	user, err := i.storage.GetInfo( /*ctx,*/ p)
 
 	if err != nil {
@@ -72,4 +75,22 @@ func (i *Info) GetInfo( /*ctx context.Context, */ p swapi.GetInfoParams) (*model
 	//проверка если надо вводных данных
 
 	return user, nil
+}
+
+func (i *Info) GetList( /*ctx context.Context, */ p swapi.GetListParams) ([]models.User, error) {
+	// var user *models.User
+	// users := make([]models.User, 0)
+	fmt.Println("___________listPeople 93 ______", p)
+	const op = "info.GetInfo"
+	fmt.Println(*p.PassportSerie, "Info_IIIIIIIIIIIII", *p.Name, *p.PassportNumber)
+	users, err := i.storage.GetList( /*ctx,*/ p)
+	fmt.Println("___________listPeople 94 ______", p)
+	if err != nil {
+		i.log.Error("failed to get user", sl.Err(err))
+		return nil, fmt.Errorf("%s:  %v", op, err)
+	}
+
+	// //проверка если надо вводных данных, но скорее всего на уровне хендлера
+
+	return users, nil
 }

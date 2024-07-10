@@ -27,8 +27,8 @@ type People struct {
 	Surname    string  `json:"surname"`
 }
 
-// PeopleList defines model for PeopleList.
-type PeopleList struct {
+// UserList defines model for UserList.
+type UserList struct {
 	Items *[]People `json:"items,omitempty"`
 	Limit *int      `json:"limit,omitempty"`
 	Page  *int      `json:"page,omitempty"`
@@ -41,20 +41,27 @@ type GetInfoParams struct {
 	PassportNumber int `form:"passportNumber" json:"passportNumber"`
 }
 
-// GetPeopleParams defines parameters for GetPeople.
-type GetPeopleParams struct {
-	Page  *int `form:"page,omitempty" json:"page,omitempty"`
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+// GetListParams defines parameters for GetList.
+type GetListParams struct {
+	Id             *int    `form:"id,omitempty" json:"id,omitempty"`
+	Surname        *string `form:"surname,omitempty" json:"surname,omitempty"`
+	Name           *string `form:"name,omitempty" json:"name,omitempty"`
+	Patronymic     *string `form:"patronymic,omitempty" json:"patronymic,omitempty"`
+	Address        *string `form:"address,omitempty" json:"address,omitempty"`
+	PassportSerie  *int    `form:"passportSerie,omitempty" json:"passportSerie,omitempty"`
+	PassportNumber *int    `form:"passportNumber,omitempty" json:"passportNumber,omitempty"`
+	Page           *int    `form:"page,omitempty" json:"page,omitempty"`
+	Limit          *int    `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-
+	// Get information about the user
 	// (GET /info)
 	GetInfo(w http.ResponseWriter, r *http.Request, params GetInfoParams)
-
-	// (GET /people)
-	GetPeople(w http.ResponseWriter, r *http.Request, params GetPeopleParams)
+	// Get users
+	// (GET /list)
+	GetList(w http.ResponseWriter, r *http.Request, params GetListParams)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -116,14 +123,70 @@ func (siw *ServerInterfaceWrapper) GetInfo(w http.ResponseWriter, r *http.Reques
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetPeople operation middleware
-func (siw *ServerInterfaceWrapper) GetPeople(w http.ResponseWriter, r *http.Request) {
+// GetList operation middleware
+func (siw *ServerInterfaceWrapper) GetList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params GetPeopleParams
+	var params GetListParams
+
+	// ------------- Optional query parameter "id" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "id", r.URL.Query(), &params.Id)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "surname" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "surname", r.URL.Query(), &params.Surname)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "surname", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "name" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "name", r.URL.Query(), &params.Name)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "patronymic" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "patronymic", r.URL.Query(), &params.Patronymic)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "patronymic", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "address" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "address", r.URL.Query(), &params.Address)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "address", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "passportSerie" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "passportSerie", r.URL.Query(), &params.PassportSerie)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "passportSerie", Err: err})
+		return
+	}
+
+	// ------------- Optional query parameter "passportNumber" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "passportNumber", r.URL.Query(), &params.PassportNumber)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "passportNumber", Err: err})
+		return
+	}
 
 	// ------------- Optional query parameter "page" -------------
 
@@ -142,7 +205,7 @@ func (siw *ServerInterfaceWrapper) GetPeople(w http.ResponseWriter, r *http.Requ
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPeople(w, r, params)
+		siw.Handler.GetList(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -267,7 +330,7 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	}
 
 	m.HandleFunc("GET "+options.BaseURL+"/info", wrapper.GetInfo)
-	m.HandleFunc("GET "+options.BaseURL+"/people", wrapper.GetPeople)
+	m.HandleFunc("GET "+options.BaseURL+"/list", wrapper.GetList)
 
 	return m
 }
@@ -275,15 +338,17 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/8RUzW7TQBB+FWvgaNkupRcfuaBKCJA4Vj1s7Wm6xd7dzo4rosgHxIFXQIKHQAWkCpQ+",
-	"w+aN0KzdhBIXhQucMpmfb+b7vk0WUNnWWYOGPZQL8NUZtiqGL9G6BiVyZB0Sa4x5VdeEPob4RrWxB8KX",
-	"LAmfws3qbfgersLnNFm9Cz+yJHwM38IyXIel5MLXLDlIE2nJkj1IgedOpj2TNjPoUzCqxd+QPwheWE51",
-	"O8VkzbzV1fRMuAlX4Xr1fmrWd3T/MhncHupTILzoNGEN5dEaYbw6XStzvJ60J+dYsawb1HymPW8rqhnb",
-	"u8FDwlMo4UG+cScfrclHX/r1EkWk5vK90a2O8GNBG8YZ0qDUDKcrbFk1U6V+i4WktDm1sVtzVGy4Jonp",
-	"FC6RvLYGSiiyItsTfOvQKKehhP2syPYhunYWWea3YDOMZ4smirU1hzWU8BT5cEB1ilSLjOShPFqAFvyL",
-	"Dml+K30JTnnvLPErJC1WbHxi6jAd3/U0zT8jPu/aE6S/gzyWbu+s8YPBj4pCPiprGE2kqpxrdBXJ5ude",
-	"FFv8AriL/WJGjb4i7XiQ/MVr0fvxsOtu6YmqE7kffXyMB1M9h4aRjGoSj3SJlCCRFTKyKHfrP4P7vBrv",
-	"2tGtmXRuCNd4qrqGodxLdzZoeO3TKEX6P0yJv+5/aUzf/wwAAP//Oyfn9sAFAAA=",
+	"H4sIAAAAAAAC/7xUzW7TQBB+ldXA0bJdSi8+ckGRECBVnKoeNvYk2eL96ey6IopyQBx4BSR4CFRAqkDp",
+	"M2zeCO3aSRriohChnrzene+b2e+b2RmUWhqtUDkLxQxsOUHJ4/I1alNjWBnSBskJjPu8qghtXOI7LmMM",
+	"+G8p81/87fK9/+mv/deELT/4Xynzn/0Pv/A3fhH2/PeUnSQshKTsCBJwUxPQ1pFQY5gnoLjEP5g/BT6/",
+	"6Is23JFWUynKfoy/9df+ZvmxD2sbuj9ZAO6C5gkQXjaCsILibM3QVZ2slTlfI/XwAksX0r2xSC+Edbt6",
+	"Codye/GYcAQFPMo23mSdMVnnynydghPxafivhRSRvjsQyuEYqdVpjP0nTjte9x3Nd+4QtoQa6RgtXNSr",
+	"rYbF7QSukKzQCgrI0zw9CvzaoOJGQAHHaZ4eQ/RsEm+ZrcjGGMsOmnAntBpUUMBzdIOW1XDiEh2SheJs",
+	"BiLwXzZI05XwBRhurdHkTpFEMGLjkqMGk66r+6/5d8aXjRwi/RvleYi2RivbGvwkz8On1MqhilflxtSi",
+	"jJfNLmxQbHaHcB/7gxkV2pKEca3kr94GvZ+2ubaPnvGKhfrRxlY86YsZKIekeM0s0hUSQyLdtoFtpOQ0",
+	"bT2JVpOMpTM+1I1jboKssV3PZHXX4/eZGmdgL1NFBYc4t5nKHexmjvuhh+LuPEMHoFevxkGJt/v+P/T5",
+	"IRTj7dwVjnhTOyiOkr1J2sernyVPHnbG1k91z5SdNmWJ1o6amq3yP8jYhQGzoaD57wAAAP//gT/AgrIH",
+	"AAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

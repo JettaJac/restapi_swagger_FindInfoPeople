@@ -19,7 +19,7 @@ var (
 
 type Storage interface {
 	GetInfo(ctx context.Context, p swapi.GetInfoParams) (*models.User, error) // ctx -!!! точно надо
-
+	GetList(ctx context.Context, p swapi.GetListParams) ([]models.User, error)
 }
 
 // Server struct
@@ -75,32 +75,124 @@ func checkInt(param string) (num int, err error) {
 		// 	// s.error(w, http.StatusBadRequest, storage.ErrEmptyRequest)
 		// 	return params, fmt.Errorf("%s: %s", op, err)
 	}
+	fmt.Println("___________paramsList33______", num)
 	return num, nil
 
 }
 
-func paramsInfo( /*w http.ResponseWriter,*/ r *http.Request) (params swapi.GetInfoParams, err error) {
+func paramsInfo( /*w http.ResponseWriter,*/ r *http.Request) (p swapi.GetInfoParams, err error) {
 	const op = "handler.GetInfo.paramsInfo"
 
 	passportSerie := r.URL.Query().Get("passportSerie")
-	params.PassportSerie, err = checkInt(passportSerie)
+	p.PassportSerie, err = checkInt(passportSerie)
 	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
-		return params, fmt.Errorf("%s: %s", op, err)
+		return p, fmt.Errorf("%s: %s", op, err)
 	}
 
 	passportNumber := r.URL.Query().Get("passportNumber")
-	params.PassportNumber, err = checkInt(passportNumber)
+	p.PassportNumber, err = checkInt(passportNumber)
 	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
-		return params, fmt.Errorf("%s: %s", op, err)
+		return p, fmt.Errorf("%s: %s", op, err)
 	}
 
-	return params, nil
+	return p, nil
 }
 
-// func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-// 	s.Server.Handler.ServeHTTP(w, r)
-// }
+func checkparamsInt(r *http.Request, param string) (num int, err error) {
+	// fmt.Println("___________paramsList3______", r)
+	data := r.URL.Query().Get(param)
+	// fmt.Println("___________paramsList4______", data)
+	if data != "" {
+		// data = "jok"
+		// fmt.Println("___________paramsList5______", p)
+		num, err = checkInt(data)
 
+		// fmt.Println("___________paramsList6______", p)
+		if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
+			return 0, err
+		}
+
+	}
+	fmt.Println("___________paramsList2______")
+
+	return num, nil
+}
+
+func paramsList( /*w http.ResponseWriter,*/ r *http.Request) (swapi.GetListParams, error) {
+	const op = "handler.GetInfo.paramsInfo"
+	var p swapi.GetListParams
+
+	// data := r.URL.Query().Get(passportSerie)
+
+	// var err error
+	surname := r.URL.Query().Get("surname")
+	if surname != "" {
+		p.Surname = &surname
+	}
+
+	name := r.URL.Query().Get("name")
+	if name != "" {
+		p.Name = &name
+	}
+
+	patronymic := r.URL.Query().Get("patronymic")
+	if surname != "" {
+		p.Patronymic = &patronymic
+	}
+
+	address := r.URL.Query().Get("address")
+	if surname != "" {
+		p.Address = &address
+	}
+
+	passportSerie, err := checkparamsInt(r, "passportSerie")
+	// fmt.Println("___________paramsList22______", p)
+	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
+		// fmt.Println("___________paramsList202______", err)
+		return p, fmt.Errorf("%s: %s", op, err)
+	}
+	p.PassportSerie = &passportSerie
+
+	passportNumber, err := checkparamsInt(r, "passportNumber")
+	fmt.Println("___________paramsList23______", p)
+
+	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
+		return p, fmt.Errorf("%s: %s", op, err)
+	}
+	p.PassportNumber = &passportNumber
+
+	// validation
+	fmt.Println("___________paramsList25______")
+
+	page, err := checkparamsInt(r, "page")
+
+	// fmt.Println("___________paramsList22______", p)
+	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
+		// fmt.Println("___________paramsList202______", err)
+		return p, fmt.Errorf("%s: %s", op, err)
+	}
+	if page == 0 {
+		page = 1
+	}
+	p.Page = &page
+
+	limit, err := checkparamsInt(r, "limit")
+
+	// fmt.Println("___________paramsList22______", p)
+	if err != nil { // !!! обработать ошибку, чтоб падал запрос в случае не корректности
+		// fmt.Println("___________paramsList202______", err)
+		return p, fmt.Errorf("%s: %s", op, err)
+	}
+	if limit == 0 {
+		limit = 10
+	}
+	p.Limit = &limit
+
+	fmt.Println("FFFFFFFFFF ", *p.Name, *p.PassportSerie)
+	return p, nil
+}
+
+// !!!возможно не надо проверять параметры у нас же сваггер проверяет
 // configureRouter сonfigures server routing for commands.
 func (s *Server) ConfigureRouter(router *http.ServeMux) {
 	// router := http.NewServeMux() // !!!возможно перенести сюда
@@ -108,8 +200,25 @@ func (s *Server) ConfigureRouter(router *http.ServeMux) {
 
 	router.HandleFunc("/info", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Создание и заполнение структуры параметров
 		s.log.Info("ConfigureRouter_GetInfo" /*, slog.String("id: ", "ded")*/) // vr may be
-		params, err := paramsInfo( /*w,*/ r)
+		params, err := paramsInfo(r)
 		fmt.Println("___________/info______")
+		if err != nil { //!!! вообще-то не должен выходить.. возможно убрать
+			//усли пустой запрос ничего не делаем, если неккотректный ввод выводи ошибку в лог
+			s.log.Error("incorrect params entered" /*, slog.String("id: ", "ded")*/) // !!!
+			s.error(w, http.StatusBadRequest, err)
+			return
+		}
+		_ = params
+
+		s.GetInfo(w, r, params)
+		s.log.Info("ConfigureRouter_f_GetInfo" /*, slog.String("id: ", "ded")*/) // vr may be
+
+	}))
+
+	router.HandleFunc("/list", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { // Создание и заполнение структуры параметров
+		s.log.Info("ConfigureRouter_GetList" /*, slog.String("id: ", "ded")*/) // vr may be
+		params, err := paramsList(r)
+		fmt.Println("___________listPeople______", params)
 		if err != nil {
 			//усли пустой запрос ничего не делаем, если неккотректный ввод выводи ошибку в лог
 			s.log.Error("incorrect params entered" /*, slog.String("id: ", "ded")*/) // !!!
@@ -123,13 +232,9 @@ func (s *Server) ConfigureRouter(router *http.ServeMux) {
 		// 	PassportNumber: passportNumber,
 		// }
 		// s.ServeHTTP(w, r)
-
-		s.GetInfo(w, r, params)
-		s.log.Info("ConfigureRouter_GetInfo" /*, slog.String("id: ", "ded")*/) // vr may be
-
-		// router.ServeHTTP(w, r)
-		// m := []byte("swagger.MarshalJSON()")
-		// w.Write(m)
+		// fmt.Println("___________listPeople 88 ______", params)
+		s.GetList(w, r, params)
+		s.log.Info("ConfigureRouter_f_GetList" /*, slog.String("id: ", "ded")*/) // vr may be
 	}))
 
 	router.Handle("/swagger", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
